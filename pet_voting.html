@@ -1,0 +1,589 @@
+{% extends 'base.html' %}
+{% block title %}StudyLink Pet of the Year{% endblock %}
+
+{% block content %}
+<style>
+body {
+    background: #050816 !important;
+    color: #e2e8f0;
+}
+.pet-voting-shell {
+    background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 28%),
+                radial-gradient(circle at bottom right, rgba(220, 38, 38, 0.12), transparent 22%),
+                #0b1220;
+    color: #e2e8f0;
+    border-radius: 32px;
+    padding: 30px 20px 40px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+}
+.pet-voting-shell h1 {
+    color: #c0fdfc;
+    font-size: 3rem;
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 18px rgba(56, 189, 248, 0.25);
+}
+.pet-voting-shell .lead {
+    color: #94a3b8;
+    font-size: 1.2rem;
+}
+.pet-voting-shell .alert-info {
+    background: rgba(56, 189, 248, 0.12);
+    border-color: rgba(56, 189, 248, 0.24);
+    color: #dbeafe;
+}
+.pet-voting-shell .card {
+    background: #111827;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 24px;
+    overflow: hidden;
+}
+.pet-voting-shell .card-img-top {
+    height: 250px;
+    object-fit: cover;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+.pet-voting-shell .card-body {
+    color: #e2e8f0;
+}
+.pet-voting-shell .card-title {
+    color: #f8fafc;
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+.pet-voting-shell .text-muted {
+    color: #94a3b8 !important;
+}
+.pet-voting-shell .card-body hr {
+    border-color: rgba(148, 163, 184, 0.16);
+}
+.pet-voting-shell .btn-success {
+    background: linear-gradient(135deg,#22c55e,#0ea5e9) !important;
+    border: none;
+    box-shadow: 0 10px 20px rgba(14, 165, 233, 0.24);
+}
+.pet-voting-shell .btn-warning {
+    background: linear-gradient(135deg,#f97316,#f43f5e) !important;
+    border: none;
+    color: #000 !important;
+    box-shadow: 0 10px 20px rgba(249, 115, 22, 0.22);
+}
+.pet-voting-shell .input-group .form-control {
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    color: #f8fafc;
+}
+.pet-voting-shell .input-group .form-control::placeholder {
+    color: #cbd5e1;
+    opacity: 1;
+}
+.pet-voting-shell .input-group .form-control:focus {
+    box-shadow: 0 0 0 0.2rem rgba(56, 189, 248, 0.2);
+    border-color: rgba(56, 189, 248, 0.35);
+}
+.pet-voting-shell .pet-card {
+    position: relative;
+}
+.pet-voting-shell .pet-card::after {
+    content: '🐾';
+    position: absolute;
+    bottom: 12px;
+    right: 14px;
+    font-size: 3rem;
+    color: rgba(148, 163, 184, 0.14);
+    pointer-events: none;
+}
+.pet-voting-shell .pet-thumb {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: zoom-in;
+}
+.pet-voting-shell .pet-thumb:hover {
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.45);
+}
+.photo-number {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    z-index: 10;
+}
+/* Fullscreen viewer — tuned for 14" 1920×1080 touch kiosk */
+.pet-fullscreen-viewer {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2100;
+    background: rgba(2, 6, 23, 0.96);
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    cursor: zoom-out;
+    touch-action: manipulation;
+}
+.pet-fullscreen-viewer.active {
+    display: flex;
+}
+.pet-fullscreen-viewer img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+    object-fit: contain;
+    border-radius: 16px;
+    box-shadow: 0 32px 100px rgba(0, 0, 0, 0.75);
+    pointer-events: none;
+}
+@media (min-width: 1800px) and (min-height: 1000px) {
+    .pet-fullscreen-viewer img {
+        max-width: 1904px;
+        max-height: 1064px;
+    }
+}
+.pet-fullscreen-hint {
+    position: absolute;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(226, 232, 240, 0.75);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+}
+.pet-voting-shell .pet-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.14);
+    color: #bfdbfe;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+}
+.pet-voting-shell .touch-keypad {
+    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1050;
+    background: rgba(10, 11, 25, 0.98);
+    border-top: 1px solid rgba(148, 163, 184, 0.18);
+    padding: 14px 10px 18px;
+    box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.45);
+}
+.pet-voting-shell .touch-keypad .keypad-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.pet-voting-shell .touch-keypad .keypad-key {
+    flex: 1;
+    min-width: 0;
+    border-radius: 16px;
+    background: rgba(148, 163, 184, 0.12);
+    color: #e2e8f0;
+    font-size: 1.3rem;
+    font-weight: 700;
+    padding: 18px 0;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.1s, background 0.15s;
+}
+.pet-voting-shell .touch-keypad .keypad-key:hover,
+.pet-voting-shell .touch-keypad .keypad-key:active {
+    background: rgba(56, 189, 248, 0.24);
+    transform: translateY(1px);
+}
+.pet-voting-shell .touch-keypad .keypad-key.action {
+    background: rgba(14, 165, 233, 0.9);
+    color: #020617;
+}
+.pet-voting-shell .touch-keypad .keypad-key.delete {
+    background: rgba(248, 113, 113, 0.9);
+    color: #020617;
+}
+.pet-voting-shell .touch-keypad .keypad-key.clear {
+    background: rgba(107, 114, 128, 0.9);
+    color: #f8fafc;
+}
+.pet-voting-header {
+    position: sticky;
+    top: 0;
+    background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 28%),
+                radial-gradient(circle at bottom right, rgba(220, 38, 38, 0.12), transparent 22%),
+                #0b1220;
+    z-index: 10;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+.pet-voting-shell .touch-keypad .keypad-label span {
+    font-size: 0.95rem;
+}
+.vote-confirm-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2200;
+    background: rgba(2, 6, 23, 0.92);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.vote-confirm-overlay.active {
+    display: flex;
+}
+.vote-confirm-card {
+    background: #111827;
+    border: 2px solid rgba(56, 189, 248, 0.35);
+    border-radius: 28px;
+    padding: 36px 40px;
+    max-width: 560px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
+}
+.vote-confirm-card h3 {
+    color: #c0fdfc;
+    font-weight: 800;
+    margin-bottom: 1.25rem;
+}
+.vote-confirm-details {
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+.vote-confirm-details p {
+    margin-bottom: 0.65rem;
+    font-size: 1.1rem;
+    color: #94a3b8;
+}
+.vote-confirm-details strong {
+    color: #f8fafc;
+}
+.vote-confirm-details .points-highlight {
+    color: #fbbf24;
+    font-size: 1.5rem;
+}
+.vote-confirm-actions {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+.vote-confirm-actions .btn {
+    flex: 1;
+    min-width: 140px;
+    font-weight: 800;
+    padding: 14px 20px;
+    border-radius: 14px;
+}
+@media (max-width: 767px) {
+    .pet-voting-shell h1 { font-size: 2.4rem; }
+    .pet-voting-shell { padding: 24px 16px 32px; }
+}
+</style>
+<div class="pet-voting-shell">
+    <div class="container mt-4">
+    <div class="pet-voting-header text-center mb-5">
+        {% if user and (user.role == 'Master' or user.role == 'Accountant') %}
+    <div class="mt-3">
+        <a href="{{ url_for('admin_add_pet') }}" class="btn btn-outline-secondary btn-sm me-2">
+            <i class="bi bi-plus-circle"></i> Manage Pets (Add New)
+        </a>
+        <a href="{{ url_for('pet_voting_results') }}" class="btn btn-outline-info btn-sm">
+            <i class="bi bi-graph-up"></i> View Results
+        </a>
+    </div>
+{% endif %}
+        <h1>🐾 StudyLink Pet of the Year 🐾</h1>
+        <p class="lead">Vote for your favorite furry (or scaly) friend!</p>
+        {% if user and user.is_vip %}
+            <div class="alert alert-info d-inline-block">
+                <strong>VIP Status Active:</strong> You have <strong>{{ user.points }}</strong> VIP points available to cast extra votes!
+            </div>
+        {% endif %}
+
+        <div class="mb-4">
+            <h3 class="text-center mb-3">Select Award Category</h3>
+            <div class="d-flex justify-content-center">
+                <div class="btn-group flex-wrap" role="group" aria-label="Award selection">
+                    {% for award in awards %}
+                    <input type="radio" class="btn-check" name="selected_award" id="award_{{ award.id }}" value="{{ award.id }}" autocomplete="off" {% if loop.first %}checked{% endif %}>
+                    <label class="btn btn-outline-primary" for="award_{{ award.id }}">{{ award.award_name }}</label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for pet in pets %}
+        <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+            <div class="card h-100 shadow-sm pet-card">
+                <!-- Assume photos are saved in static/pets/ -->
+                <img src="{{ url_for('static', filename='pets/' ~ pet.photo_filename) }}" class="card-img-top pet-thumb" alt="{{ pet.pet_name }}" onclick="togglePetImage(this)">
+                <span class="photo-number">{{ pet.display_number if pet.display_number and pet.display_number > 0 else loop.index }}</span>
+                <div class="card-body text-center">
+                    <h4 class="card-title">{{ pet.pet_name }}</h4>
+                    {% if pet.owner_name %}
+                        <p class="text-muted small">Owner: {{ pet.owner_name }}</p>
+                    {% endif %}
+                    <hr>
+
+                    <form action="{{ url_for('submit_pet_vote') }}" method="POST" class="mb-2 pet-vote-form">
+                        <input type="hidden" name="pet_id" value="{{ pet.id }}">
+                        <input type="hidden" name="award_id" class="award-id-input" value="{{ awards[0].id }}">
+
+                        <button type="submit" name="vote_type" value="free" class="btn btn-success w-100 mb-2">Cast Free Vote</button>
+
+                        {% if user and user.is_vip %}
+                        <div class="input-group mt-2 align-items-center">
+                            <input type="text" name="points_to_use" class="form-control touch-points" placeholder="Touch to enter points" readonly inputmode="none" min="1" max="{{ user.points }}" required onclick="showTouchKeypad(this)">
+                            <button type="button" class="btn btn-warning" onclick="requestPointsVote(this)">Vote with Points</button>
+                        </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center">
+            <p>No pets registered yet. Check back soon!</p>
+        </div>
+        {% endfor %}
+    </div>
+    <div id="touchKeypad" class="touch-keypad">
+        <div class="keypad-label">
+            <span>Enter points for voting</span>
+            <button type="button" class="btn-close btn-close-white" aria-label="Close" onclick="hideTouchKeypad()"></button>
+        </div>
+        <div class="keypad-row">
+            <div class="keypad-key" onclick="tapKey('1')">1</div>
+            <div class="keypad-key" onclick="tapKey('2')">2</div>
+            <div class="keypad-key" onclick="tapKey('3')">3</div>
+        </div>
+        <div class="keypad-row">
+            <div class="keypad-key" onclick="tapKey('4')">4</div>
+            <div class="keypad-key" onclick="tapKey('5')">5</div>
+            <div class="keypad-key" onclick="tapKey('6')">6</div>
+        </div>
+        <div class="keypad-row">
+            <div class="keypad-key" onclick="tapKey('7')">7</div>
+            <div class="keypad-key" onclick="tapKey('8')">8</div>
+            <div class="keypad-key" onclick="tapKey('9')">9</div>
+        </div>
+        <div class="keypad-row">
+            <div class="keypad-key clear" onclick="clearKey()">C</div>
+            <div class="keypad-key" onclick="tapKey('0')">0</div>
+            <div class="keypad-key delete" onclick="backspaceKey()">⌫</div>
+        </div>
+        <div class="keypad-row">
+            <div class="keypad-key action" style="flex: 1;" onclick="hideTouchKeypad()">DONE</div>
+        </div>
+    </div>
+    </div>
+</div>
+<div id="petFullscreenViewer" class="pet-fullscreen-viewer" aria-hidden="true" onclick="closePetImage()">
+    <img id="petFullscreenImg" src="" alt="">
+    <span class="pet-fullscreen-hint">Tap anywhere to close</span>
+</div>
+{% if user and user.is_vip %}
+<div id="pointsVoteConfirmModal" class="vote-confirm-overlay" aria-hidden="true" onclick="cancelPointsVote()">
+    <div class="vote-confirm-card" role="dialog" aria-labelledby="pointsConfirmTitle" onclick="event.stopPropagation()">
+        <h3 id="pointsConfirmTitle">Confirm Points Vote</h3>
+        <p class="text-white-50 mb-3">Please check your vote before submitting.</p>
+        <div class="vote-confirm-details">
+            <p>Pet: <strong id="confirmPetName">—</strong></p>
+            <p>Category: <strong id="confirmAwardName">—</strong></p>
+            <p>Points to use: <strong id="confirmPointsAmount" class="points-highlight">0</strong></p>
+            <p>Balance after vote: <strong id="confirmPointsRemaining">0</strong> points</p>
+        </div>
+        <div class="vote-confirm-actions">
+            <button type="button" class="btn btn-outline-light" onclick="cancelPointsVote()">Cancel &amp; Adjust</button>
+            <button type="button" class="btn btn-warning" onclick="confirmPointsVote()">Confirm Vote</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+<script>
+    let activeTouchInput = null;
+    let pendingPointsForm = null;
+    const usedFreeAwardIds = {{ used_free_award_ids | tojson | safe }};
+    const userMaxPoints = {{ user.points if user and user.is_vip else 0 }};
+
+    function togglePetImage(thumb) {
+        const viewer = document.getElementById('petFullscreenViewer');
+        const fullImg = document.getElementById('petFullscreenImg');
+        const isOpen = viewer.classList.contains('active');
+        const isSame = isOpen && fullImg.dataset.source === thumb.src;
+
+        if (isSame) {
+            closePetImage();
+            return;
+        }
+
+        fullImg.src = thumb.src;
+        fullImg.alt = thumb.alt || '';
+        fullImg.dataset.source = thumb.src;
+        viewer.classList.add('active');
+        viewer.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closePetImage() {
+        const viewer = document.getElementById('petFullscreenViewer');
+        const fullImg = document.getElementById('petFullscreenImg');
+        viewer.classList.remove('active');
+        viewer.setAttribute('aria-hidden', 'true');
+        fullImg.removeAttribute('src');
+        fullImg.removeAttribute('data-source');
+        document.body.style.overflow = '';
+    }
+
+    function getSelectedAwardName() {
+        const awardRadio = document.querySelector('input[name="selected_award"]:checked');
+        if (!awardRadio) return '';
+        const label = document.querySelector(`label[for="${awardRadio.id}"]`);
+        return label ? label.textContent.trim() : '';
+    }
+
+    function requestPointsVote(btn) {
+        const form = btn.closest('.pet-vote-form');
+        const pointsInput = form.querySelector('.touch-points');
+        const points = parseInt(pointsInput.value, 10);
+
+        if (!points || points <= 0) {
+            alert('Please enter the number of points you want to use.');
+            showTouchKeypad(pointsInput);
+            return;
+        }
+        if (points > userMaxPoints) {
+            alert(`You only have ${userMaxPoints.toLocaleString()} VIP points available.`);
+            showTouchKeypad(pointsInput);
+            return;
+        }
+
+        hideTouchKeypad();
+
+        const petName = form.closest('.pet-card').querySelector('.card-title').textContent.trim();
+        document.getElementById('confirmPetName').textContent = petName;
+        document.getElementById('confirmAwardName').textContent = getSelectedAwardName();
+        document.getElementById('confirmPointsAmount').textContent = points.toLocaleString();
+        document.getElementById('confirmPointsRemaining').textContent = (userMaxPoints - points).toLocaleString();
+
+        pendingPointsForm = form;
+        const modal = document.getElementById('pointsVoteConfirmModal');
+        modal.classList.add('active');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function cancelPointsVote() {
+        pendingPointsForm = null;
+        const modal = document.getElementById('pointsVoteConfirmModal');
+        if (!modal) return;
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+
+    function confirmPointsVote() {
+        if (!pendingPointsForm) return;
+        const form = pendingPointsForm;
+        pendingPointsForm = null;
+
+        let voteTypeInput = form.querySelector('input[name="vote_type"]');
+        if (!voteTypeInput) {
+            voteTypeInput = document.createElement('input');
+            voteTypeInput.type = 'hidden';
+            voteTypeInput.name = 'vote_type';
+            form.appendChild(voteTypeInput);
+        }
+        voteTypeInput.value = 'points';
+
+        const modal = document.getElementById('pointsVoteConfirmModal');
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        form.submit();
+    }
+
+    function updateFreeVoteButtons() {
+        const currentAwardId = document.querySelector('.award-id-input').value;
+        const freeButtons = document.querySelectorAll('button[name="vote_type"][value="free"]');
+        freeButtons.forEach(button => {
+            const isUsed = usedFreeAwardIds.includes(Number(currentAwardId));
+            button.disabled = isUsed;
+        });
+    }
+
+    function showTouchKeypad(target) {
+        if (!target || !target.classList.contains('touch-points')) {
+            target = document.querySelector('.touch-points:focus');
+        }
+        if (!target) {
+            target = document.querySelector('.touch-points');
+        }
+        if (!target) return;
+
+        activeTouchInput = target;
+        document.getElementById('touchKeypad').style.display = 'block';
+        target.classList.add('active-touch-input');
+    }
+
+    function hideTouchKeypad() {
+        const keypad = document.getElementById('touchKeypad');
+        keypad.style.display = 'none';
+        if (activeTouchInput) activeTouchInput.classList.remove('active-touch-input');
+        activeTouchInput = null;
+    }
+
+    function tapKey(value) {
+        if (!activeTouchInput) return;
+        const current = activeTouchInput.value || '';
+        const result = current + value;
+        if (/^\d{1,4}$/.test(result)) {
+            activeTouchInput.value = result;
+        }
+    }
+
+    function backspaceKey() {
+        if (!activeTouchInput) return;
+        activeTouchInput.value = activeTouchInput.value.slice(0, -1);
+    }
+
+    function clearKey() {
+        if (!activeTouchInput) return;
+        activeTouchInput.value = '';
+    }
+
+    document.querySelectorAll('input[name="selected_award"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.querySelectorAll('.award-id-input').forEach(input => input.value = this.value);
+            updateFreeVoteButtons();
+        });
+    });
+
+    // Initialize
+    updateFreeVoteButtons();
+
+    document.addEventListener('click', function(event) {
+        const keypad = document.getElementById('touchKeypad');
+        if (!keypad.contains(event.target) && !event.target.classList.contains('touch-points') && !event.target.closest('.btn-outline-info')) {
+            hideTouchKeypad();
+        }
+    });
+</script>
+{% endblock %}
