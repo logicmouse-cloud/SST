@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Management - SST System</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/bootstrap-icons.css') }}" rel="stylesheet">
+    <style>
+        body { background: #f8fafc; font-family: 'Inter', sans-serif; padding-bottom: 60px; /* Buffer for keyboard */ }
+        .admin-nav { background: #1e293b; color: white; padding: 1rem 0; }
+        
+        /* Quick Adjust Card Styling */
+        .credit-card { 
+            background: white; 
+            border-left: 5px solid #ffc107; 
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        .credit-card:focus-within { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        
+        /* Table Styling */
+        .user-table-card { border-radius: 15px; overflow: hidden; border: none; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
+        .name-link { color: #2563eb; text-decoration: none; cursor: pointer; font-weight: 700; }
+        .name-link:hover { text-decoration: underline; color: #1d4ed8; }
+        
+        /* Row Highlighting */
+        .debt-row { background-color: #fff1f2 !important; }
+        .points-badge { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; font-weight: 800; padding: 0.5rem 0.8rem; border-radius: 10px; }
+        
+        /* VIP Tag Styling */
+        .vip-tag { 
+            font-size: 0.65rem; 
+            background: #fef3c7; 
+            color: #92400e; 
+            border: 1px solid #fde68a; 
+            font-weight: 900; 
+            padding: 2px 6px;
+            vertical-align: middle;
+            border-radius: 4px;
+        }
+
+        .role-badge { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Virtual Floating Keyboard UI */
+        .kb-toggle { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); font-size: 1.4rem; color: #64748b; background: none; border: none; cursor: pointer; padding: 5px 10px; border-radius: 8px; transition: 0.2s; z-index: 5; }
+        .kb-toggle:hover, .kb-toggle:active { background: #e2e8f0; color: #2563eb; }
+
+        #virtualKeyboard, #virtualKeyboardNumber {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #cbd5e1;
+            padding: 15px 10px 25px 10px;
+            box-shadow: 0 -10px 25px rgba(0,0,0,0.15);
+            z-index: 1050;
+            border-top: 1px solid #94a3b8;
+        }
+        .vk-header { display: flex; justify-content: space-between; align-items: center; max-width: 900px; margin: 0 auto 10px auto; padding: 0 10px; }
+        .vk-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 8px; max-width: 900px; margin-left: auto; margin-right: auto; }
+        .vk-key {
+            background: white;
+            border: 1px solid #94a3b8;
+            border-radius: 8px;
+            padding: 16px 0;
+            flex: 1;
+            max-width: 70px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.3rem;
+            cursor: pointer;
+            user-select: none;
+            color: #1e293b;
+            box-shadow: 0 3px 0 #94a3b8;
+            transition: 0.05s;
+        }
+        .vk-key:active { transform: translateY(3px); box-shadow: 0 0 0 #94a3b8; background: #e2e8f0; }
+        .vk-key.wide { max-width: 100px; font-size: 1.1rem; background: #f1f5f9; color: #dc3545; }
+        .vk-key.space { max-width: 500px; font-size: 1.1rem; color: #64748b; background: #f1f5f9;}
+    </style>
+</head>
+<body>
+
+    <nav class="admin-nav mb-4 shadow">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-person-gear fs-3 me-3 text-warning"></i>
+                <h4 class="fw-bold mb-0">User Management</h4>
+            </div>
+            <div class="d-flex gap-2">
+                {% if session.get('user_role') == 'Master' %}
+                <a href="/admin/dashboard" class="btn btn-warning btn-sm rounded-pill px-3 fw-bold">
+                    <i class="bi bi-shield-lock-fill me-1"></i> System Settings
+                </a>
+                {% endif %}
+                
+                <a href="/" class="btn btn-outline-light btn-sm rounded-pill px-3">Dashboard</a>
+                <a href="/admin/accounts" class="btn btn-outline-light btn-sm rounded-pill px-3">Account</a>
+                <a href="/logout" class="btn btn-danger btn-sm rounded-pill" aria-label="Exit"><i class="bi bi-power"></i></a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}{% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4" role="alert">
+              <i class="bi bi-info-circle me-2"></i> {{ message }} 
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}{% endif %}
+        {% endwith %}
+
+        <div id="quickAdjust" class="card p-4 mb-4 credit-card">
+            <div class="d-flex align-items-center mb-3">
+                <div class="bg-warning text-white rounded-circle p-3 me-3">
+                    <i class="bi bi-lightning-fill fs-5"></i>
+                </div>
+                <h5 class="mb-0 fw-bold">Quick Credit Update</h5>
+            </div>
+            <form action="{{ url_for('adjust_credit') }}" method="POST" class="row g-3" id="quickAdjustForm">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">Target Card ID</label>
+                    <input type="text" name="target_card_id" id="quickCardId" class="form-control form-control-lg" placeholder="Scan IC Card..." required autofocus>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">Adjustment Amount ($)</label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text">$</span>
+                        <input type="text" inputmode="decimal" name="amount" id="quickAmount" class="form-control" placeholder="0.01" required onclick="setActiveInput('quickAmount')">
+                        <button class="btn btn-outline-secondary" type="button" onclick="toggleNumKeyboard()" title="Show Number Pad">
+                            <i class="bi bi-calculator"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-warning btn-lg flex-grow-1 fw-bold text-dark shadow-sm">
+                        <i class="bi bi-arrow-repeat me-2"></i>Apply
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-lg shadow-sm" onclick="resetQuickAdjust()" title="Clear Fields">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="row mb-3 g-2 align-items-center">
+            <div class="col-md-6">
+                <div class="input-group shadow-sm position-relative">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="userSearch" class="form-control border-start-0 py-2" style="padding-right: 50px;" placeholder="Search users..." onkeyup="filterUsers()" onclick="setActiveInput('userSearch')">
+                    <button class="kb-toggle" type="button" onclick="toggleKeyboard()" title="Show Virtual Keyboard">
+                        <i class="bi bi-keyboard"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-6 text-md-end text-muted small">
+                <i class="bi bi-info-circle me-1"></i> Tip: Click a user's name to quickly load their card ID above.
+            </div>
+        </div>
+
+        <div class="card user-table-card border-0">
+            <table class="table table-hover align-middle mb-0" id="userTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-4 py-3">User Identity</th>
+                        <th>Role</th>
+                        <th>Card ID</th>
+                        <th class="text-center">VIP Points</th>
+                        <th class="text-end">Credit Balance</th>
+                        <th class="text-center">Management</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr class="user-row {% if u.balance < -50 %}debt-row{% endif %}">
+                        <td class="ps-4">
+                            <a href="#quickAdjust" class="name-link fs-6" onclick="fillQuickAdjust('{{ u.card_id }}')">
+                                {{ u.name }}
+                            </a>
+                            {% if u.is_vip == 1 %}
+                                <span class="badge vip-tag ms-1"><i class="bi bi-gem"></i> VIP</span>
+                            {% endif %}
+                            <div class="text-muted small" style="font-size: 0.75rem;">{{ u.email }}</div>
+                        </td>
+                        <td>
+                            <span class="badge rounded-pill role-badge 
+                                {% if u.role == 'Master' %}bg-dark
+                                {% elif u.role == 'Accountant' %}bg-primary
+                                {% elif u.role == 'Runner' %}bg-info
+                                {% else %}bg-secondary{% endif %}">
+                                {{ u.role }}
+                            </span>
+                        </td>
+                        <td><code class="text-primary fw-bold">{{ u.card_id }}</code></td>
+                        <td class="text-center">
+                            <span class="points-badge">{{ u.points or 0 }} <i class="bi bi-star-fill ms-1" style="font-size: 0.7rem;"></i></span>
+                        </td>
+                        <td class="text-end fw-bold {% if u.balance < 0 %}text-danger{% else %}text-success{% endif %}" style="font-size: 1.1rem;">
+                            ${{ "%.2f"|format(u.balance or 0) }}
+                        </td>
+                        <td class="text-center">
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="/admin/user/{{ u.id }}" class="btn btn-sm btn-primary px-3 shadow-sm rounded">
+                                    <i class="bi bi-pencil-square me-1"></i> Edit Profile
+                                </a>
+                                {% if session.get('user_role') == 'Master' %}
+                                <form action="{{ url_for('reset_balance') }}" method="POST" onsubmit="return confirm('Reset {{ u.name }} to $0.00?')" class="m-0">
+                                    <input type="hidden" name="user_id" value="{{ u.id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger px-3 shadow-sm rounded" title="Reset Balance" aria-label="Reset Balance">
+                                        <i class="bi bi-eraser"></i> Reset
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="virtualKeyboard">
+        <div class="vk-header">
+            <span class="fw-bold text-muted small"><i class="bi bi-keyboard me-2"></i>SEARCH KEYBOARD</span>
+            <button class="btn-close" onclick="toggleKeyboard()" aria-label="Close"></button>
+        </div>
+        <div class="vk-row">
+            <div class="vk-key" onclick="typeKey('q')">Q</div>
+            <div class="vk-key" onclick="typeKey('w')">W</div>
+            <div class="vk-key" onclick="typeKey('e')">E</div>
+            <div class="vk-key" onclick="typeKey('r')">R</div>
+            <div class="vk-key" onclick="typeKey('t')">T</div>
+            <div class="vk-key" onclick="typeKey('y')">Y</div>
+            <div class="vk-key" onclick="typeKey('u')">U</div>
+            <div class="vk-key" onclick="typeKey('i')">I</div>
+            <div class="vk-key" onclick="typeKey('o')">O</div>
+            <div class="vk-key" onclick="typeKey('p')">P</div>
+        </div>
+        <div class="vk-row">
+            <div class="vk-key" onclick="typeKey('a')">A</div>
+            <div class="vk-key" onclick="typeKey('s')">S</div>
+            <div class="vk-key" onclick="typeKey('d')">D</div>
+            <div class="vk-key" onclick="typeKey('f')">F</div>
+            <div class="vk-key" onclick="typeKey('g')">G</div>
+            <div class="vk-key" onclick="typeKey('h')">H</div>
+            <div class="vk-key" onclick="typeKey('j')">J</div>
+            <div class="vk-key" onclick="typeKey('k')">K</div>
+            <div class="vk-key" onclick="typeKey('l')">L</div>
+        </div>
+        <div class="vk-row">
+            <div class="vk-key" onclick="typeKey('z')">Z</div>
+            <div class="vk-key" onclick="typeKey('x')">X</div>
+            <div class="vk-key" onclick="typeKey('c')">C</div>
+            <div class="vk-key" onclick="typeKey('v')">V</div>
+            <div class="vk-key" onclick="typeKey('b')">B</div>
+            <div class="vk-key" onclick="typeKey('n')">N</div>
+            <div class="vk-key" onclick="typeKey('m')">M</div>
+            <div class="vk-key wide" onclick="typeKey('BACKSPACE')"><i class="bi bi-backspace"></i></div>
+        </div>
+        <div class="vk-row">
+            <div class="vk-key wide" onclick="typeKey('CLEAR')">CLEAR</div>
+            <div class="vk-key space" onclick="typeKey('SPACE')">SPACE</div>
+        </div>
+    </div>
+
+    <div id="virtualKeyboardNumber">
+        <div class="vk-header">
+            <span class="fw-bold text-muted small"><i class="bi bi-calculator me-2"></i>AMOUNT NUMBER PAD</span>
+            <button class="btn-close" onclick="toggleNumKeyboard()" aria-label="Close"></button>
+        </div>
+        <div class="vk-row">
+            <div class="vk-key" onclick="typeNum('1')">1</div>
+            <div class="vk-key" onclick="typeNum('2')">2</div>
+            <div class="vk-key" onclick="typeNum('3')">3</div>
+        </div>
+        <div class="vk-row">
+            <div class="vk-key" onclick="typeNum('4')">4</div>
+            <div class="vk-key" onclick="typeNum('5')">5</div>
+            <div class="vk-key" onclick="typeNum('6')">6</div>
+        </div>
+        <div class="vk-row">
+            <div class="vk-key" onclick="typeNum('7')">7</div>
+            <div class="vk-key" onclick="typeNum('8')">8</div>
+            <div class="vk-key" onclick="typeNum('9')">9</div>
+        </div>
+        <div class="vk-row">
+            <div class="vk-key" onclick="typeNum('.')">.</div>
+            <div class="vk-key" onclick="typeNum('0')">0</div>
+            <div class="vk-key wide" onclick="typeNum('BACKSPACE')"><i class="bi bi-backspace"></i></div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script>
+        let activeInputId = 'userSearch'; 
+
+        function setActiveInput(id) {
+            activeInputId = id;
+        }
+
+        function resetQuickAdjust() {
+            if (confirm("Clear the Quick Credit Update fields?")) {
+                document.getElementById('quickCardId').value = '';
+                document.getElementById('quickAmount').value = '';
+                document.getElementById('quickCardId').focus();
+            }
+        }
+
+        function toggleKeyboard() {
+            const alphaKb = document.getElementById('virtualKeyboard');
+            const numKb = document.getElementById('virtualKeyboardNumber');
+            numKb.style.display = 'none';
+            alphaKb.style.display = (alphaKb.style.display === 'block') ? 'none' : 'block';
+            if (alphaKb.style.display === 'block') {
+                activeInputId = 'userSearch';
+                document.getElementById('userSearch').focus();
+            }
+        }
+
+        function toggleNumKeyboard() {
+            const alphaKb = document.getElementById('virtualKeyboard');
+            const numKb = document.getElementById('virtualKeyboardNumber');
+            alphaKb.style.display = 'none';
+            numKb.style.display = (numKb.style.display === 'block') ? 'none' : 'block';
+            if (numKb.style.display === 'block') {
+                activeInputId = 'quickAmount';
+                document.getElementById('quickAmount').focus();
+            }
+        }
+
+        function typeKey(char) {
+            const input = document.getElementById(activeInputId);
+            if (char === 'BACKSPACE') {
+                input.value = input.value.slice(0, -1);
+            } else if (char === 'SPACE') {
+                input.value += ' ';
+            } else if (char === 'CLEAR') {
+                input.value = '';
+            } else {
+                input.value += char;
+            }
+            if (activeInputId === 'userSearch') filterUsers();
+        }
+
+        // FIXED: typeNum handles the string manipulation correctly for decimals
+        function typeNum(char) {
+            const input = document.getElementById('quickAmount');
+            let currentVal = input.value;
+
+            if (char === 'BACKSPACE') {
+                input.value = currentVal.slice(0, -1);
+            } else if (char === '.') {
+                // Prevent multiple decimals
+                if (!currentVal.includes('.')) {
+                    // If empty, prepend a 0 for cleaner formatting
+                    input.value = currentVal === "" ? "0." : currentVal + ".";
+                }
+            } else {
+                // Standard digit entry
+                input.value = currentVal + char;
+            }
+        }
+
+        function fillQuickAdjust(cardId) {
+            const input = document.getElementById('quickCardId');
+            input.value = cardId;
+            input.focus();
+            const card = document.getElementById('quickAdjust');
+            card.style.borderColor = "#2563eb";
+            setTimeout(() => card.style.borderColor = "#ffc107", 800);
+        }
+
+        function filterUsers() {
+            const input = document.getElementById('userSearch');
+            const filter = input.value.toLowerCase();
+            const rows = document.getElementsByClassName('user-row');
+            for (let i = 0; i < rows.length; i++) {
+                const text = rows[i].innerText.toLowerCase();
+                rows[i].style.display = text.includes(filter) ? "" : "none";
+            }
+        }
+    </script>
+</body>
+</html>
