@@ -10,16 +10,11 @@ import uuid
 from functools import wraps
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, send_file, send_from_directory, flash, session, jsonify, Response
-from jinja2 import ChoiceLoader, FileSystemLoader
 from math import ceil
 
 # --- PATH CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__)
-app.jinja_loader = ChoiceLoader([
-    FileSystemLoader(os.path.join(BASE_DIR, 'templates')),
-    FileSystemLoader(BASE_DIR),
-])
 app.secret_key = "sst_ultra_secure_2026_key"
 
 # UNIFIED DATABASE PATH: Everything now points to sst.db
