@@ -1,7 +1,10 @@
-{% extends 'base.html' %}
-{% block title %}Admin - Add Pet{% endblock %}
-
-{% block content %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin - Add Pet</title>
+<link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
 <style>
 body {
     background: #050816 !important;
@@ -136,12 +139,25 @@ body {
     }
     body {
         padding-bottom: 0;
+    }
 /* --- 这里同步更新底部覆盖的样式 --- */
 .admin-shell .form-text {
     color: #94a3b8 !important; /* 确保覆盖为灰白色 */
 }
 </style>
+</head>
+<body>
 <div class="admin-shell container mt-5 mb-5">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card shadow-sm">
@@ -510,4 +526,6 @@ body {
         hideTouchKeyboard();
     });
 </script>
-{% endblock %}
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>
