@@ -12,11 +12,11 @@ from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, send_file, send_from_directory, flash, session, jsonify, Response
 from math import ceil
 
+# --- PATH CONFIGURATION ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__)
 app.secret_key = "sst_ultra_secure_2026_key"
 
-# --- PATH CONFIGURATION ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # UNIFIED DATABASE PATH: Everything now points to sst.db
 DB_NAME = os.path.join(BASE_DIR, 'sst.db') 
 BACKUP_DIR = os.path.join(BASE_DIR, 'backups')
@@ -43,6 +43,23 @@ def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
     
+    # Users are referenced by pet voting, walking challenge, and most admin flows.
+    cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        card_id TEXT UNIQUE,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE,
+        role TEXT DEFAULT 'Customer',
+        balance REAL DEFAULT 0.0,
+        is_vip INTEGER DEFAULT 0,
+        points INTEGER DEFAULT 0,
+        height INTEGER DEFAULT 0,
+        target_may INTEGER DEFAULT 0,
+        target_july INTEGER DEFAULT 0,
+        target_sep INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )''')
+
     # 1. Products Table
     cursor.execute('''CREATE TABLE IF NOT EXISTS products (
         barcode TEXT PRIMARY KEY, name TEXT NOT NULL, category TEXT, price REAL DEFAULT 0.0, 
@@ -198,12 +215,22 @@ def init_db():
     # ==========================================
 
     # --- SCHEMA FIXES FOR EXISTING DATABASES ---
-    # Check for 'is_vip' in users table
     cursor.execute("PRAGMA table_info(users)")
     user_columns = [c[1] for c in cursor.fetchall()]
-    if 'is_vip' not in user_columns:
-        cursor.execute('ALTER TABLE users ADD COLUMN is_vip INTEGER DEFAULT 0')
-        print("Added is_vip column to users.")
+    user_column_defaults = {
+        'is_vip': 'INTEGER DEFAULT 0',
+        'balance': 'REAL DEFAULT 0.0',
+        'points': 'INTEGER DEFAULT 0',
+        'role': "TEXT DEFAULT 'Customer'",
+        'height': 'INTEGER DEFAULT 0',
+        'target_may': 'INTEGER DEFAULT 0',
+        'target_july': 'INTEGER DEFAULT 0',
+        'target_sep': 'INTEGER DEFAULT 0',
+    }
+    for column_name, column_definition in user_column_defaults.items():
+        if column_name not in user_columns:
+            cursor.execute(f'ALTER TABLE users ADD COLUMN {column_name} {column_definition}')
+            print(f"Added {column_name} column to users.")
 
     # Check for 'user_id' and 'user_name' in logs table
     cursor.execute("PRAGMA table_info(logs)")
@@ -372,13 +399,13 @@ def is_master():
 def migrate_walking_privacy():
     conn = get_db_connection()
     try:
-        conn.execute("SELECT is_private FROM walking_challenge LIMIT 1")
-    except sqlite3.OperationalError:
-        conn.execute("ALTER TABLE walking_challenge ADD COLUMN is_private INTEGER DEFAULT 0")
-        conn.commit()
-    conn.close()
-
-migrate_walking_privacy()
+        cursor = conn.execute("PRAGMA table_info(walking_challenge)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if 'is_private' not in columns:
+            conn.execute("ALTER TABLE walking_challenge ADD COLUMN is_private INTEGER DEFAULT 0")
+            conn.commit()
+    finally:
+        conn.close()
 
 # --- APP NAVIGATION & DASHBOARDS ---
 
@@ -2874,6 +2901,7 @@ def reset_walking_challenge():
 
 # Ensure the database schema exists for both direct execution and imported app instances.
 init_db()
+migrate_walking_privacy()
 
 if __name__ == '__main__':
     # MUST be 0.0.0.0 to allow cellphone access

@@ -1,7 +1,10 @@
-{% extends 'base.html' %}
-{% block title %}Pet of the Year - Results{% endblock %}
-
-{% block content %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pet of the Year - Results</title>
+<link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
 <style>
 body {
     background: #050816 !important;
@@ -53,7 +56,19 @@ body {
     color: #dbeafe;
 }
 </style>
+</head>
+<body>
 <div class="results-shell container mt-4 mb-5">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>🏆 Pet Awards Dashboard</h2>
         <div class="btn-group">
@@ -115,4 +130,6 @@ body {
         </div>
     {% endif %}
 </div>
-{% endblock %}
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

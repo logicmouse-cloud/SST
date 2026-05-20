@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mahi Ora - Walk Off Winter Dashboard</title>
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
-    <link rel="stylesheet" href="static/css/bootstrap-icons.css">
-    <script src="static/js/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-icons.css') }}">
+    <script src="{{ url_for('static', filename='js/xlsx.full.min.js') }}"></script>
     <style>
         :root {
             --bg-dark: #020617; --panel-bg: #0f172a; --accent-cyan: #06b6d4; --gold: #f59e0b;
