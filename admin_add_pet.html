@@ -1,0 +1,513 @@
+{% extends 'base.html' %}
+{% block title %}Admin - Add Pet{% endblock %}
+
+{% block content %}
+<style>
+body {
+    background: #050816 !important;
+    color: #e2e8f0;
+}
+.admin-shell {
+    background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 28%),
+                radial-gradient(circle at bottom right, rgba(220, 38, 38, 0.12), transparent 22%),
+                #0b1220;
+    color: #e2e8f0;
+    border-radius: 32px;
+    padding: 32px 24px 40px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+}
+.admin-shell .card {
+    background: #111827;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 24px;
+}
+.admin-shell .card-header {
+    background: rgba(15, 23, 42, 0.95);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+.admin-shell .form-label,
+.admin-shell .table {
+    color: #cbd5e1;
+}
+
+/* --- 修改后的灰白色提示文字 --- */
+.admin-shell .form-text {
+    color: #94a3b8 !important; /* 灰白色，对应 e.g. 等说明字样 */
+}
+
+.admin-shell .form-control,
+.admin-shell .form-select,
+.admin-shell textarea {
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    color: #f8fafc;
+}
+
+/* --- 新增：修改输入框占位符颜色 --- */
+.admin-shell .form-control::placeholder {
+    color: #94a3b8 !important; /* 灰白色，对应 e.g., Cutest Pet 字样 */
+    opacity: 1;
+}
+
+.admin-shell .form-control:focus,
+.admin-shell .form-select:focus,
+.admin-shell textarea:focus {
+    box-shadow: 0 0 0 0.2rem rgba(56, 189, 248, 0.2);
+    border-color: rgba(56, 189, 248, 0.35);
+}
+.admin-shell .btn-primary,
+.admin-shell .btn-info,
+.admin-shell .btn-success,
+.admin-shell .btn-warning,
+.admin-shell .btn-secondary {
+    border: none;
+}
+.admin-shell .btn-outline-secondary {
+    color: #e2e8f0;
+    border-color: rgba(28, 180, 43, 0.26);
+}
+.admin-shell .btn-outline-secondary:hover {
+    background: rgba(148, 163, 184, 0.12);
+}
+.admin-shell .table {
+    color: #e2e8f0;
+}
+.admin-shell .table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+.admin-shell .table thead th {
+    background: rgba(15, 23, 42, 0.9);
+}
+.touch-keyboard {
+    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1080;
+    background: rgba(10, 11, 25, 0.98);
+    border-top: 1px solid rgba(148, 163, 184, 0.18);
+        padding: 12px 12px 18px;
+        box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.4);
+        max-height: 45vh;
+        overflow-y: auto;
+        backdrop-filter: blur(12px);
+    }
+    .touch-keyboard .key-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+    .touch-keyboard .key-cell {
+        flex: 1 1 0;
+        min-width: 0;
+        border-radius: 14px;
+        background: rgba(148, 163, 184, 0.12);
+        color: #e2e8f0;
+        text-align: center;
+        padding: 14px 0;
+        font-size: 1rem;
+        cursor: pointer;
+        user-select: none;
+        transition: transform 0.1s, background 0.15s;
+        min-width: 44px;
+    }
+    .touch-keyboard .space {
+        flex: 3 1 0;
+    }
+    .touch-keyboard .key-cell:hover,
+    .touch-keyboard .key-cell:active {
+        background: rgba(56, 189, 248, 0.24);
+        transform: translateY(1px);
+    }
+    .touch-keyboard .key-cell.action {
+        background: rgba(14, 165, 233, 0.9);
+        color: #020617;
+    }
+    .touch-keyboard .key-cell.shift {
+        background: rgba(107, 114, 128, 0.9);
+        color: #f8fafc;
+    }
+    .admin-shell {
+        transition: padding-bottom 0.2s ease;
+    }
+    body {
+        padding-bottom: 0;
+/* --- 这里同步更新底部覆盖的样式 --- */
+.admin-shell .form-text {
+    color: #94a3b8 !important; /* 确保覆盖为灰白色 */
+}
+</style>
+<div class="admin-shell container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h4 class="mb-0">⚙️ Admin: Add New Pet</h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-white">Register a new pet into the system by uploading a photo from your USB drive or local storage.</p>
+
+                    <div class="mb-4 p-3 rounded-4" style="background: rgba(15, 23, 42, 0.88); border: 1px solid rgba(148, 163, 184, 0.18);">
+                        <h5 class="mb-3 text-white">🏅 Add Award Category</h5>
+                        <form action="{{ url_for('admin_add_pet') }}" method="POST">
+                            <input type="hidden" name="action" value="add_award">
+                            <div class="mb-3">
+                                <label for="award_name" class="form-label">Award Name *</label>
+                                <input type="text" id="award_name" name="award_name" class="form-control touch-input" placeholder="e.g., Cutest Pet" autocomplete="off" onclick="showTouchKeyboard(this)">
+                            </div>
+                            <div class="mb-3">
+                                <label for="award_description" class="form-label">Award Description</label>
+                                <textarea id="award_description" name="award_description" class="form-control touch-input" rows="2" placeholder="Optional description for this award." onclick="showTouchKeyboard(this)"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-info">Save Award</button>
+                        </form>
+                    </div>
+
+                    {% if awards %}
+                    <div class="mb-4 text-white">
+                        <h5>Configured Awards</h5>
+                        <div class="table-responsive rounded-4" style="background: rgba(98, 126, 190, 0.88); border: 1px solid rgba(148, 163, 184, 0.18);">
+                            <table class="table table-sm table-striped mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="color: #94a3b8;">#</th>
+                                        <th style="color: #94a3b8;">Award Name</th>
+                                        <th style="color: #94a3b8;">Description</th>
+                                        <th style="color: #94a3b8;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for award in awards %}
+                                    <tr>
+                                        <td>{{ award.id }}</td>
+                                        <td>{{ award.award_name }}</td>
+                                        <td>{{ award.description or '—' }}</td>
+                                        <td>
+                                            <form action="{{ url_for('admin_add_pet') }}" method="POST" class="d-inline" onsubmit="return confirm('Delete award {{ award.award_name }}? This cannot be undone.');">
+                                                <input type="hidden" name="action" value="delete_award">
+                                                <input type="hidden" name="award_id" value="{{ award.id }}">
+                                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-4 p-3 rounded-4" style="background: rgba(15, 23, 42, 0.88); border: 1px solid rgba(148, 163, 184, 0.18);">
+                        <h5 class="mb-3 text-white">🐾 Add New Pet</h5>
+                        <form action="{{ url_for('admin_add_pet') }}" method="POST" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="pet_name" class="form-label">Pet's Name *</label>
+                                <input type="text" id="pet_name" name="pet_name" class="form-control touch-input" placeholder="e.g., Fluffy" required autocomplete="off" onclick="showTouchKeyboard(this)">
+                            </div>
+                            <div class="mb-3">
+                                <label for="owner_name" class="form-label">Owner's Name (Optional)</label>
+                                <input type="text" id="owner_name" name="owner_name" class="form-control touch-input" placeholder="e.g., John Doe" autocomplete="off" onclick="showTouchKeyboard(this)">
+                            </div>
+                            <div class="mb-3">
+                                <label for="photo" class="form-label">Upload Pet Photo *</label>
+                                <input type="file" id="photo" name="photo" class="form-control" accept="image/*" required>
+                                <div class="form-text">Select an image file from your USB drive or local storage (.jpg, .png, .gif).</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="display_number" class="form-label">Display Number (Optional)</label>
+                                <input type="number" id="display_number" name="display_number" class="form-control touch-input" placeholder="e.g., 1" min="0" autocomplete="off" inputmode="numeric" pattern="[0-9]*" onclick="showTouchKeyboard(this)">
+                                <div class="form-text">Set a custom number to control the display order on the voting page. Lower numbers appear first.</div>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary">Save Pet</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if pets %}
+<div class="admin-shell container mt-3 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">🗂 Manage Existing Pets</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive rounded-4" style="background: rgba(15, 23, 42, 0.88); border: 1px solid rgba(148, 163, 184, 0.18);">
+                        <table class="table table-sm table-striped mb-0 align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="color: #94a3b8;">ID</th>
+                                    <th style="color: #94a3b8;">Photo</th>
+                                    <th style="color: #94a3b8;">Name</th>
+                                    <th style="color: #94a3b8;">Owner</th>
+                                    <th style="color: #94a3b8;">Display #</th>
+                                    <th style="color: #94a3b8;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pet in pets %}
+                                <tr>
+                                    <td>{{ pet.id }}</td>
+                                    <td>
+                                        <img src="{{ url_for('static', filename='pets/' ~ pet.photo_filename) }}" alt="{{ pet.pet_name }}" style="height:48px;width:48px;object-fit:cover;border-radius:8px;border:1px solid rgba(148,163,184,0.12);">
+                                    </td>
+                                    <td>{{ pet.pet_name }}</td>
+                                    <td>{{ pet.owner_name or '—' }}</td>
+                                    <td>{{ pet.display_number or '—' }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-secondary me-1" data-pet='{{ pet | tojson | safe }}' onclick="openEditPetModal(this)">Edit</button>
+                                        <form action="{{ url_for('admin_add_pet') }}" method="POST" class="d-inline" onsubmit="return confirm('Delete pet {{ pet.pet_name }}? This cannot be undone.');">
+                                            <input type="hidden" name="action" value="delete_pet">
+                                            <input type="hidden" name="pet_id" value="{{ pet.id }}">
+                                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Pet Modal -->
+<div class="modal fade" id="editPetModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark" style="border-radius:12px;">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Pet</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="editPetForm" action="{{ url_for('admin_add_pet') }}" method="POST" enctype="multipart/form-data">
+        <div class="modal-body">
+            <input type="hidden" name="action" value="edit_pet">
+            <input type="hidden" name="pet_id" id="edit_pet_id">
+
+            <div class="mb-3">
+                <label class="form-label">Pet's Name *</label>
+                <input type="text" id="edit_pet_name" name="pet_name" class="form-control touch-input" required autocomplete="off" onclick="showTouchKeyboard(this)">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Owner's Name (Optional)</label>
+                <input type="text" id="edit_owner_name" name="owner_name" class="form-control touch-input" autocomplete="off" onclick="showTouchKeyboard(this)">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Display Number (Optional)</label>
+                <input type="number" id="edit_display_number" name="display_number" class="form-control touch-input" inputmode="numeric" pattern="[0-9]*" onclick="showTouchKeyboard(this)">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Current Photo</label>
+                <div class="d-flex align-items-center gap-3">
+                    <img id="edit_photo_preview" src="" alt="preview" style="height:96px;width:96px;object-fit:cover;border-radius:8px;border:1px solid rgba(148,163,184,0.12);">
+                    <div>
+                        <label class="form-label">Replace Photo</label>
+                        <input type="file" id="edit_photo" name="photo" class="form-control" accept="image/*">
+                        <div class="form-text">Leave empty to keep existing photo.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+    function openEditPetModal(btn) {
+        const petJson = btn.getAttribute('data-pet');
+        if (!petJson) return;
+        const pet = JSON.parse(petJson);
+        document.getElementById('edit_pet_id').value = pet.id;
+        document.getElementById('edit_pet_name').value = pet.pet_name || '';
+        document.getElementById('edit_owner_name').value = pet.owner_name || '';
+        document.getElementById('edit_display_number').value = pet.display_number || '';
+        const preview = document.getElementById('edit_photo_preview');
+        preview.src = pet.photo_filename ? ("{{ url_for('static', filename='pets/') }}" + pet.photo_filename) : '';
+        const editPhotoInput = document.getElementById('edit_photo');
+        editPhotoInput.value = '';
+
+        // show modal via Bootstrap
+        const modalEl = document.getElementById('editPetModal');
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+
+    document.getElementById('edit_photo')?.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('edit_photo_preview');
+            preview.src = e.target.result;
+        }
+        reader.readAsDataURL(file);
+    });
+</script>
+{% endif %}
+<div id="touchKeyboard" class="touch-keyboard">
+    <div class="key-row">
+        <div class="key-cell letter-key" data-lower="q" data-upper="Q" onclick="tapKey(this.innerText)">q</div>
+        <div class="key-cell letter-key" data-lower="w" data-upper="W" onclick="tapKey(this.innerText)">w</div>
+        <div class="key-cell letter-key" data-lower="e" data-upper="E" onclick="tapKey(this.innerText)">e</div>
+        <div class="key-cell letter-key" data-lower="r" data-upper="R" onclick="tapKey(this.innerText)">r</div>
+        <div class="key-cell letter-key" data-lower="t" data-upper="T" onclick="tapKey(this.innerText)">t</div>
+        <div class="key-cell letter-key" data-lower="y" data-upper="Y" onclick="tapKey(this.innerText)">y</div>
+        <div class="key-cell letter-key" data-lower="u" data-upper="U" onclick="tapKey(this.innerText)">u</div>
+        <div class="key-cell letter-key" data-lower="i" data-upper="I" onclick="tapKey(this.innerText)">i</div>
+        <div class="key-cell letter-key" data-lower="o" data-upper="O" onclick="tapKey(this.innerText)">o</div>
+        <div class="key-cell letter-key" data-lower="p" data-upper="P" onclick="tapKey(this.innerText)">p</div>
+    </div>
+    <div class="key-row">
+        <div class="key-cell letter-key" data-lower="a" data-upper="A" onclick="tapKey(this.innerText)">a</div>
+        <div class="key-cell letter-key" data-lower="s" data-upper="S" onclick="tapKey(this.innerText)">s</div>
+        <div class="key-cell letter-key" data-lower="d" data-upper="D" onclick="tapKey(this.innerText)">d</div>
+        <div class="key-cell letter-key" data-lower="f" data-upper="F" onclick="tapKey(this.innerText)">f</div>
+        <div class="key-cell letter-key" data-lower="g" data-upper="G" onclick="tapKey(this.innerText)">g</div>
+        <div class="key-cell letter-key" data-lower="h" data-upper="H" onclick="tapKey(this.innerText)">h</div>
+        <div class="key-cell letter-key" data-lower="j" data-upper="J" onclick="tapKey(this.innerText)">j</div>
+        <div class="key-cell letter-key" data-lower="k" data-upper="K" onclick="tapKey(this.innerText)">k</div>
+        <div class="key-cell letter-key" data-lower="l" data-upper="L" onclick="tapKey(this.innerText)">l</div>
+    </div>
+    <div class="key-row">
+        <div class="key-cell shift" onclick="activateShift()">Shift</div>
+        <div class="key-cell letter-key" data-lower="z" data-upper="Z" onclick="tapKey(this.innerText)">z</div>
+        <div class="key-cell letter-key" data-lower="x" data-upper="X" onclick="tapKey(this.innerText)">x</div>
+        <div class="key-cell letter-key" data-lower="c" data-upper="C" onclick="tapKey(this.innerText)">c</div>
+        <div class="key-cell letter-key" data-lower="v" data-upper="V" onclick="tapKey(this.innerText)">v</div>
+        <div class="key-cell letter-key" data-lower="b" data-upper="B" onclick="tapKey(this.innerText)">b</div>
+        <div class="key-cell letter-key" data-lower="n" data-upper="N" onclick="tapKey(this.innerText)">n</div>
+        <div class="key-cell letter-key" data-lower="m" data-upper="M" onclick="tapKey(this.innerText)">m</div>
+        <div class="key-cell action" onclick="tapKey('BACK')">⌫</div>
+    </div>
+    <div class="key-row">
+        <div class="key-cell" onclick="tapKey('1')">1</div>
+        <div class="key-cell" onclick="tapKey('2')">2</div>
+        <div class="key-cell" onclick="tapKey('3')">3</div>
+        <div class="key-cell" onclick="tapKey('4')">4</div>
+        <div class="key-cell" onclick="tapKey('5')">5</div>
+        <div class="key-cell" onclick="tapKey('6')">6</div>
+        <div class="key-cell" onclick="tapKey('7')">7</div>
+        <div class="key-cell" onclick="tapKey('8')">8</div>
+        <div class="key-cell" onclick="tapKey('9')">9</div>
+        <div class="key-cell" onclick="tapKey('0')">0</div>
+    </div>
+    <div class="key-row">
+        <div class="key-cell action space" onclick="tapKey('SPACE')">Space</div>
+        <div class="key-cell action" onclick="tapKey('CLEAR')">Clear</div>
+        <div class="key-cell action" onclick="hideTouchKeyboard()">Done</div>
+    </div>
+</div>
+<script>
+    let activeTouchInput = null;
+    let isShift = false;
+
+    function showTouchKeyboard(target) {
+        if (!target || !target.classList.contains('touch-input')) {
+            target = document.querySelector('.touch-input:focus');
+        }
+        if (!target) {
+            target = document.querySelector('.touch-input');
+        }
+        if (!target) return;
+
+        activeTouchInput = target;
+        const keyboard = document.getElementById('touchKeyboard');
+        const shell = document.querySelector('.admin-shell');
+        if (shell) shell.style.paddingBottom = '260px';
+        keyboard.style.display = 'block';
+        target.focus();
+
+        setTimeout(() => {
+            const rect = target.getBoundingClientRect();
+            const keyboardHeight = keyboard.offsetHeight;
+            const buffer = 16;
+            const visibleBottom = window.innerHeight - keyboardHeight - buffer;
+            if (rect.bottom > visibleBottom) {
+                window.scrollBy({ top: rect.bottom - visibleBottom, behavior: 'smooth' });
+            } else if (rect.top < 80) {
+                window.scrollBy({ top: rect.top - 80, behavior: 'smooth' });
+            }
+        }, 120);
+    }
+
+    function hideTouchKeyboard() {
+        const keyboard = document.getElementById('touchKeyboard');
+        keyboard.style.display = 'none';
+        activeTouchInput = null;
+        // Reset shift when hiding keyboard
+        isShift = false;
+        updateKeyboard();
+        const shell = document.querySelector('.admin-shell');
+        if (shell) shell.style.paddingBottom = '';
+    }
+
+    function activateShift() {
+        isShift = true;
+        updateKeyboard();
+    }
+
+    function updateKeyboard() {
+        const letterKeys = document.querySelectorAll('.letter-key');
+        letterKeys.forEach(key => {
+            key.innerText = isShift ? key.dataset.upper : key.dataset.lower;
+        });
+    }
+
+    function tapKey(value) {
+        if (!activeTouchInput) return;
+        const isNumericField = activeTouchInput.type === 'number' || activeTouchInput.inputMode === 'numeric';
+        if (value === 'BACK') {
+            activeTouchInput.value = activeTouchInput.value.slice(0, -1);
+            return;
+        }
+        if (value === 'CLEAR') {
+            activeTouchInput.value = '';
+            return;
+        }
+        if (value === 'SPACE') {
+            if (!isNumericField) {
+                activeTouchInput.value += ' ';
+            }
+            return;
+        }
+        if (isNumericField && !/^[0-9]$/.test(value)) {
+            return;
+        }
+        activeTouchInput.value += value;
+        activeTouchInput.focus();
+        // After typing a letter, reset shift if it was on
+        if (isShift && /[a-zA-Z]/.test(value)) {
+            isShift = false;
+            updateKeyboard();
+        }
+    }
+
+    // Initialize keyboard
+    updateKeyboard();
+
+    document.addEventListener('click', function(event) {
+        const keyboard = document.getElementById('touchKeyboard');
+        if (keyboard.contains(event.target) || event.target.classList.contains('touch-input')) {
+            return;
+        }
+        hideTouchKeyboard();
+    });
+</script>
+{% endblock %}

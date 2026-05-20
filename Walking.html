@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mahi Ora - Walk Off Winter Dashboard</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/bootstrap-icons.css">
+    <script src="static/js/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #020617; --panel-bg: #0f172a; --accent-cyan: #06b6d4; --gold: #f59e0b;
+            --tier-green: #22c55e; --tier-blue: #3b82f6; --tier-yellow: #eab308; --tier-red: #ef4444;
+        }
+        body { background: var(--bg-dark); color: white; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+        .container-main { padding: 15px 25px; height: 100vh; display: flex; flex-direction: column; }
+        
+        .kiosk-grid { display: grid; grid-template-columns: 40% 60%; gap: 20px; flex-grow: 1; min-height: 0; margin-bottom: 10px; }
+        .dashboard-panel { background: var(--panel-bg); border-radius: 25px; border: 1px solid #1e293b; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; flex-direction: column; min-height: 0; }
+        .scroll-area { overflow-y: auto; flex-grow: 1; padding-right: 8px; }
+
+        .stat-card { background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 15px; margin-bottom: 12px; }
+        .stat-value { font-size: 2rem; font-weight: 900; color: var(--accent-cyan); line-height: 1; }
+        .stat-label { font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .stat-sub { font-size: 0.85rem; color: #64748b; font-weight: 700; margin-top: 3px; }
+
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; }
+        .cal-day-header { font-weight: 800; color: var(--accent-cyan); font-size: 0.9rem; padding-bottom: 10px; }
+        .cal-date { aspect-ratio: 1.2; display: flex; align-items: center; justify-content: center; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 1.4rem; background: rgba(255,255,255,0.03); border: 2px solid transparent; }
+        .cal-date.selected-day { border-color: var(--accent-cyan); background: rgba(6, 182, 212, 0.2); }
+
+        .progress-custom { height: 22px; border-radius: 12px; background: #020617; border: 1px solid #334155; overflow: hidden; position: relative; }
+        .progress-bar-text { position: absolute; width: 100%; text-align: center; font-size: 0.8rem; font-weight: 900; line-height: 22px; color: white; text-shadow: 0 0 4px black; z-index: 5; }
+
+        .color-legend { display: flex; gap: 15px; font-size: 0.75rem; font-weight: 700; margin-top: 15px; justify-content: center; padding-top: 12px; border-top: 1px solid #1e293b; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-box { width: 14px; height: 14px; border-radius: 3px; }
+        .tier-15k { background: var(--tier-green); } .tier-10k { background: var(--tier-blue); } .tier-5k { background: var(--tier-yellow); } .tier-low { background: var(--tier-red); }
+
+        .map-container { background: #010409; border-radius: 20px; border: 2px solid var(--accent-cyan); height: 420px; display: flex; justify-content: center; margin-bottom: 15px; position: relative; }
+        .nz-map-svg { height: 100%; width: auto; stroke: #475569; stroke-width: 2.5; fill: #1e293b; }
+        .city-dot { fill: var(--accent-cyan); transition: 0.3s; } .city-dot.active { fill: var(--gold); r: 10; }
+        .route-line { stroke: var(--gold); stroke-width: 4; stroke-dasharray: 10; animation: dash 3s linear infinite; }
+        @keyframes dash { to { stroke-dashoffset: -100; } }
+
+        .numpad-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(2, 6, 23, 0.98); z-index: 3000; display: none; align-items: center; justify-content: center; }
+        .numpad-card { background: #1e293b; padding: 30px; border-radius: 40px; width: 550px; border: 3px solid var(--accent-cyan); }
+        .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .num-btn { height: 85px; background: #0f172a; border: 2px solid #334155; color: white; border-radius: 20px; font-size: 2.5rem; font-weight: 800; }
+        .num-btn.submit { background: var(--accent-cyan); color: black; grid-column: span 3; height: 90px; font-size: 1.8rem; margin-top: 10px; }
+        .numpad-display { background: #020617; color: var(--accent-cyan); font-size: 4rem; font-weight: 900; text-align: center; border-radius: 20px; padding: 10px; margin-bottom: 20px; border: 2px solid #334155; }
+        
+        /* 针对1080p触屏优化的特大号导出弹窗样式 */
+        .export-card { width: 850px; padding: 50px; max-height: 95vh; overflow-y: auto; }
+        .export-filename-box { background: #020617; border: 2px dashed #3b82f6; border-radius: 20px; padding: 25px; word-break: break-all; }
+        .drive-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .drive-btn { background: #0f172a; border: 3px solid #334155; color: white; border-radius: 18px; padding: 18px 12px; font-weight: 800; font-size: 1.4rem; text-align: center; cursor: pointer; }
+        .drive-btn.usb { border-color: var(--tier-green); }
+        .drive-btn.selected { border-color: var(--accent-cyan); background: rgba(6, 182, 212, 0.15); box-shadow: 0 0 20px rgba(6, 182, 212, 0.35); }
+        .drive-btn small { display: block; font-size: 0.75rem; color: #94a3b8; font-weight: 600; margin-top: 6px; }
+        .export-status { min-height: 2.5rem; text-align: center; font-size: 1.25rem; font-weight: 700; }
+        .touch-btn-lg { font-size: 2rem; padding: 25px 20px; border-radius: 30px; font-weight: 900; letter-spacing: 2px; }
+        .touch-btn-secondary { font-size: 1.6rem; padding: 20px; border-radius: 30px; font-weight: 700; }
+    </style>
+</head>
+<body onload="initDashboard()">
+
+<div class="container-main">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <h1 class="h2 fw-bold text-info mb-0">Mahi Ora Walk Off Winter Challenge 2026</h1>
+            <h6 class="text-white-50">Hey <strong>{{ user.name }}</strong>, Welcome aboard as you step into this winter adventure!</h6>
+        </div>
+        <div class="d-flex gap-2">
+            {% if user.role == 'Master' %}
+            <button class="btn btn-outline-success rounded-pill" onclick="openExportUI()"><i class="bi bi-file-earmark-spreadsheet me-1"></i>MASTER EXPORT</button>
+            {% endif %}
+            <a href="/shopping" class="btn btn-outline-light rounded-pill px-4">EXIT</a>
+        </div>
+    </div>
+
+    <div class="kiosk-grid">
+        <div class="d-flex flex-column gap-3">
+            <div class="dashboard-panel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <button class="btn btn-outline-info rounded-circle" onclick="changeMonth(-1)"><i class="bi bi-chevron-left"></i></button>
+                    <h2 id="monthYearLabel" class="fw-bold text-uppercase mb-0">---</h2>
+                    <button class="btn btn-outline-info rounded-circle" onclick="changeMonth(1)"><i class="bi bi-chevron-right"></i></button>
+                </div>
+                <div class="calendar-grid mb-3" id="calendarGrid"></div>
+                
+                <div class="color-legend mb-3">
+                    <div class="legend-item"><div class="legend-box tier-15k"></div> 15k+</div>
+                    <div class="legend-item"><div class="legend-box tier-10k"></div> 10k+</div>
+                    <div class="legend-item"><div class="legend-box tier-5k"></div> 5k+</div>
+                    <div class="legend-item"><div class="legend-box tier-low"></div> Logged</div>
+                </div>
+
+                <button id="btnLogSteps" class="btn btn-info btn-lg rounded-pill w-100 fw-bold py-3 mb-2" onclick="openNumpad('steps')">LOG STEPS</button>
+                <div id="selectedDateDisplay" class="text-center p-2 bg-dark rounded-3 d-none">
+                    <span id="viewingDateLabel" class="text-info"></span>: <span id="viewingStepsLabel" class="fw-bold">0</span> steps
+                </div>
+            </div>
+
+            <div class="dashboard-panel flex-grow-1 overflow-hidden">
+                <h6 class="stat-label text-info border-bottom border-secondary pb-1 mb-2">Settings</h6>
+                <div class="scroll-area">
+                    <div class="stat-card clickable mb-2" onclick="openNumpad('height')">
+                        <div class="stat-label">Body Height</div>
+                        <div class="d-flex align-items-end gap-1"><div id="displayHeight" class="stat-value">{{ user.height or 175 }}</div><small class="text-white-50">cm</small></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Route Selection</div>
+                        <select id="cityOrigin" class="form-select bg-dark text-white border-secondary mb-2" onchange="updatePersonalStats()">
+                            <option value="Auckland">Auckland</option><option value="Hamilton">Hamilton</option><option value="Tauranga">Tauranga</option><option value="Palmerston North" selected>Palmerston North</option><option value="Wellington">Wellington</option><option value="Nelson">Nelson</option><option value="Christchurch">Christchurch</option><option value="Dunedin">Dunedin</option><option value="Queenstown">Queenstown</option><option value="Invercargill">Invercargill</option>
+                        </select>
+                        <select id="cityDest" class="form-select bg-dark text-white border-secondary" onchange="updatePersonalStats()">
+                            <option value="Auckland">Auckland</option><option value="Hamilton">Hamilton</option><option value="Tauranga">Tauranga</option><option value="Palmerston North">Palmerston North</option><option value="Wellington" selected>Wellington</option><option value="Nelson">Nelson</option><option value="Christchurch">Christchurch</option><option value="Dunedin">Dunedin</option><option value="Queenstown">Queenstown</option><option value="Invercargill">Invercargill</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-panel overflow-hidden">
+            <div class="scroll-area">
+                <h6 class="text-warning fw-bold mb-2 border-bottom border-secondary pb-1">Personal Records</h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-4"><div class="stat-card"><div class="stat-label">Best Day</div><div id="bestDay" class="stat-value">0</div><div id="bestDayDist" class="stat-sub">0 km</div></div></div>
+                    <div class="col-4"><div class="stat-card"><div class="stat-label">Best Week</div><div id="bestWeek" class="stat-value">0</div><div id="bestWeekDist" class="stat-sub">0 km</div></div></div>
+                    <div class="col-4"><div class="stat-card"><div class="stat-label">Best Month</div><div id="bestMonth" class="stat-value">0</div><div id="bestMonthDist" class="stat-sub">0 km</div></div></div>
+                    <div class="col-4"><div class="stat-card"><div class="stat-label">Daily Avg</div><div id="avgSteps" class="stat-value">0</div><div id="avgDist" class="stat-sub">0 km</div></div></div>
+                    <div class="col-4"><div class="stat-card"><div class="stat-label">Overall Total</div><div id="totalSteps" class="stat-value">0</div><div id="totalDist" class="stat-sub">0 km</div></div></div>
+                    <div class="col-4"><div class="stat-card"><div class="stat-label">Days Logged</div><div id="daysActive" class="stat-value">0</div><div class="stat-sub">entries</div></div></div>
+                </div>
+
+                <div class="row g-2 mb-4">
+                    <div class="col-6">
+                        <div class="stat-card p-2 small mb-0"><div class="stat-label">1M Milestone <span id="goal1MText" class="float-end">0%</span></div><div class="progress progress-custom"><div id="goal1MBar" class="progress-bar bg-info" style="width: 0%"></div></div></div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card p-2 small mb-0"><div class="stat-label">5M Milestone <span id="goal5MText" class="float-end">0%</span></div><div class="progress progress-custom"><div id="goal5MBar" class="progress-bar bg-gold" style="width: 0%"></div></div></div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-lg-6">
+                        <div class="map-container">
+                            <svg viewBox="0 0 400 800" class="nz-map-svg">
+                                <path d="M165,110 L190,50 L250,55 L320,160 L280,310 L230,350 L180,360 L160,330 L165,220 L140,150 Z" />
+                                <path d="M125,385 L180,420 L150,550 L80,750 L20,680 L50,550 L100,395 Z" />
+                                <line id="mapLink" class="route-line" x1="0" y1="0" x2="0" y2="0" visibility="hidden" />
+                                <circle id="dot-Auckland" cx="165" cy="110" r="5" class="city-dot" /><circle id="dot-Hamilton" cx="175" cy="155" r="5" class="city-dot" /><circle id="dot-Tauranga" cx="205" cy="155" r="5" class="city-dot" /><circle id="dot-Palmerston North" cx="170" cy="310" r="5" class="city-dot" /><circle id="dot-Wellington" cx="160" cy="360" r="5" class="city-dot" /><circle id="dot-Nelson" cx="125" cy="385" r="5" class="city-dot" /><circle id="dot-Christchurch" cx="115" cy="495" r="5" class="city-dot" /><circle id="dot-Dunedin" cx="55" cy="615" r="5" class="city-dot" /><circle id="dot-Queenstown" cx="35" cy="585" r="5" class="city-dot" /><circle id="dot-Invercargill" cx="30" cy="655" r="5" class="city-dot" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <h6 class="text-info fw-bold mb-2">Trip Simulator Progress</h6>
+                        <div class="stat-card mb-3">
+                            <div class="stat-label"><span id="tripLabel">Route</span> <span id="tripPercent" class="float-end">0%</span></div>
+                            <div class="progress progress-custom mt-1 mb-2"><div id="tripBar" class="progress-bar bg-success" style="width: 0%"></div></div>
+                            <div class="small text-white-50">Target: <span id="tripDistTotal" class="text-white">0 km</span> | Rem: <span id="tripDistRem" class="text-warning">0 km</span></div>
+                        </div>
+
+                        <h6 class="text-info fw-bold mb-2">Monthly Targets</h6>
+                        <div class="stat-card target-card goal-highlight mb-2" onclick="openNumpad('target_may')">
+                            <div class="stat-label">May Goal <span id="mayTargetLabel" class="float-end">0k/250k</span></div>
+                            <div class="progress progress-custom mt-1"><div id="mayPctText" class="progress-bar-text">0%</div><div id="mayProgress" class="progress-bar" style="width: 0%"></div></div>
+                        </div>
+                        <div class="stat-card target-card goal-highlight mb-2" onclick="openNumpad('target_july')">
+                            <div class="stat-label">July Goal <span id="julyTargetLabel" class="float-end">0k/250k</span></div>
+                            <div class="progress progress-custom mt-1"><div id="julyPctText" class="progress-bar-text">0%</div><div id="julyProgress" class="progress-bar" style="width: 0%"></div></div>
+                        </div>
+                        <div class="stat-card target-card goal-highlight mb-2" onclick="openNumpad('target_sep')">
+                            <div class="stat-label">September Goal <span id="sepTargetLabel" class="float-end">0k/250k</span></div>
+                            <div class="progress progress-custom mt-1"><div id="sepPctText" class="progress-bar-text">0%</div><div id="sepProgress" class="progress-bar" style="width: 0%"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="numpadOverlay" class="numpad-overlay">
+    <div class="numpad-card">
+        <h3 id="numpadTitle" class="text-center text-info mb-3 fw-bold">ENTRY</h3>
+        <div id="numpadDisplay" class="numpad-display">0</div>
+        <div class="numpad-grid">
+            <button class="num-btn" onclick="addNum('7')">7</button><button class="num-btn" onclick="addNum('8')">8</button><button class="num-btn" onclick="addNum('9')">9</button>
+            <button class="num-btn" onclick="addNum('4')">4</button><button class="num-btn" onclick="addNum('5')">5</button><button class="num-btn" onclick="addNum('6')">6</button>
+            <button class="num-btn" onclick="addNum('1')">1</button><button class="num-btn" onclick="addNum('2')">2</button><button class="num-btn" onclick="addNum('3')">3</button>
+            <button class="num-btn action text-danger" onclick="clearNum()">CLR</button><button class="num-btn" onclick="addNum('0')">0</button><button class="num-btn action text-warning" onclick="backNum()">DEL</button>
+            <button class="num-btn submit" onclick="confirmNumpad()">CONFIRM & SAVE</button>
+            <button class="btn btn-link text-white-50 w-100 mt-2" onclick="closeNumpad()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div id="exportModalOverlay" class="numpad-overlay">
+    <div class="numpad-card export-card">
+        <h1 class="text-center text-info mb-4 fw-bold" style="font-size: 3rem;">EXPORT DATA</h1>
+        
+        <p class="text-center text-white-50 fs-4 mb-2">Prepared Filename:</p>
+        <div class="export-filename-box text-center mb-5">
+            <span id="displayTimestampName" class="text-warning fw-bold fs-3"></span>
+        </div>
+
+        <p class="text-center text-white-50 fs-5 mb-2">Select destination drive:</p>
+        <div id="exportDriveList" class="drive-grid mb-3"></div>
+        <div id="exportDriveStatus" class="export-status text-warning mb-3"></div>
+
+        <button class="btn btn-info w-100 touch-btn-lg text-dark mb-3" onclick="executeExport()">
+            <i class="bi bi-device-hdd me-2"></i> SAVE TO SELECTED DRIVE
+        </button>
+        
+        <button class="btn btn-outline-light w-100 touch-btn-secondary" onclick="closeExportUI()">
+            CANCEL
+        </button>
+    </div>
+</div>
+
+<form id="stepForm" action="/upload_steps" method="POST" style="display:none;"><input type="hidden" name="steps" id="formSteps"><input type="hidden" name="log_date" id="formDate"></form>
+<form id="configForm" action="/update_walking_config" method="POST" style="display:none;">
+    <input type="hidden" name="height" id="confHeight" value="{{ user.height or 175 }}">
+    <input type="hidden" name="target_may" id="confMay" value="{{ user.target_may or 250000 }}">
+    <input type="hidden" name="target_july" id="confJuly" value="{{ user.target_july or 250000 }}">
+    <input type="hidden" name="target_sep" id="confSep" value="{{ user.target_sep or 250000 }}">
+</form>
+
+<script>
+    const userDailySteps = {{ user_daily_steps | default({}) | tojson }};
+    const masterExportData = {{ master_export_data | default([]) | tojson }};
+    const userName = {{ user.name | tojson }};
+    let focusDateStr = new Date().toISOString().split('T')[0];
+    let currentViewDate = new Date(2026, 4, 1);
+    let activeInputType = 'steps', currentNumValue = "0";
+    
+    let monthlyTargets = { 'target_may': {{ user.target_may or 250000 }}, 'target_july': {{ user.target_july or 250000 }}, 'target_sep': {{ user.target_sep or 250000 }} };
+
+    const cityCoords = { "Auckland": {x: 165, y: 110}, "Hamilton": {x: 175, y: 155}, "Tauranga": {x: 205, y: 155}, "Palmerston North": {x: 170, y: 310}, "Wellington": {x: 160, y: 360}, "Nelson": {x: 125, y: 385}, "Christchurch": {x: 115, y: 495}, "Dunedin": {x: 55, y: 615}, "Queenstown": {x: 35, y: 585}, "Invercargill": {x: 30, y: 655} };
+
+    const nzDistances = {
+        "Auckland": {"Hamilton": 125, "Tauranga": 200, "Palmerston North": 510, "Wellington": 645, "Nelson": 850, "Christchurch": 1050, "Dunedin": 1410, "Queenstown": 1530, "Invercargill": 1620},
+        "Hamilton": {"Tauranga": 105, "Palmerston North": 385, "Wellington": 520, "Christchurch": 925, "Dunedin": 1285, "Invercargill": 1495, "Queenstown": 1405, "Auckland": 125},
+        "Palmerston North": {"Wellington": 145, "Christchurch": 580, "Dunedin": 900, "Queenstown": 1020, "Tauranga": 310, "Nelson": 355, "Invercargill": 1110, "Auckland": 510, "Hamilton": 385},
+        "Wellington": {"Nelson": 210, "Christchurch": 440, "Dunedin": 800, "Queenstown": 920, "Palmerston North": 145, "Auckland": 645, "Hamilton": 520},
+        "Nelson": {"Christchurch": 410, "Dunedin": 720, "Queenstown": 840, "Invercargill": 930, "Wellington": 210, "Palmerston North": 355, "Auckland": 850},
+        "Christchurch": {"Dunedin": 360, "Queenstown": 480, "Invercargill": 570, "Nelson": 410, "Wellington": 440, "Palmerston North": 580, "Hamilton": 925, "Auckland": 1050},
+        "Dunedin": {"Invercargill": 210, "Queenstown": 280, "Christchurch": 360, "Nelson": 720, "Wellington": 800, "Palmerston North": 900, "Hamilton": 1285, "Auckland": 1410},
+        "Queenstown": {"Invercargill": 190, "Dunedin": 280, "Christchurch": 480, "Nelson": 840, "Wellington": 920, "Palmerston North": 1020, "Hamilton": 1405, "Auckland": 1530},
+        "Invercargill": {"Queenstown": 190, "Dunedin": 210, "Christchurch": 570, "Nelson": 930, "Palmerston North": 1110, "Hamilton": 1495, "Auckland": 1620},
+        "Tauranga": {"Auckland": 200, "Hamilton": 105, "Palmerston North": 310, "Dunedin": 1210}
+    };
+
+    function initDashboard() { renderCalendar(); updatePersonalStats(); }
+
+    function updatePersonalStats() {
+        const height = parseInt(document.getElementById('displayHeight').innerText);
+        const origin = document.getElementById('cityOrigin').value, dest = document.getElementById('cityDest').value;
+        const tripKm = (nzDistances[origin] && nzDistances[origin][dest]) || (nzDistances[dest] && nzDistances[dest][origin]) || 0;
+
+        let totals = { steps: 0, count: 0, bestDay: 0 }, monthlySteps = {}, weeklySteps = {};
+        
+        Object.keys(userDailySteps).forEach(dateStr => {
+            const steps = parseInt(userDailySteps[dateStr].steps) || 0;
+            const dateObj = new Date(dateStr);
+            totals.steps += steps; if(steps > 0) totals.count++; 
+            if (steps > totals.bestDay) totals.bestDay = steps;
+
+            const mKey = dateStr.substring(0, 7);
+            const wKey = dateStr.substring(0, 4) + "-W" + Math.ceil(dateObj.getDate() / 7);
+            monthlySteps[mKey] = (monthlySteps[mKey] || 0) + steps;
+            weeklySteps[wKey] = (weeklySteps[wKey] || 0) + steps;
+        });
+
+        const stepLenKm = (height * 0.48) / 100000;
+        const bWeek = Math.max(...Object.values(weeklySteps), 0);
+        const bMonth = Math.max(...Object.values(monthlySteps), 0);
+        const avgSteps = totals.count > 0 ? Math.round(totals.steps / totals.count) : 0;
+
+        document.getElementById('bestDay').innerText = totals.bestDay.toLocaleString(); 
+        document.getElementById('bestDayDist').innerText = (totals.bestDay * stepLenKm).toFixed(2) + " km";
+        document.getElementById('bestWeek').innerText = bWeek.toLocaleString();
+        document.getElementById('bestWeekDist').innerText = (bWeek * stepLenKm).toFixed(2) + " km";
+        document.getElementById('bestMonth').innerText = bMonth.toLocaleString();
+        document.getElementById('bestMonthDist').innerText = (bMonth * stepLenKm).toFixed(2) + " km";
+        document.getElementById('avgSteps').innerText = avgSteps.toLocaleString(); 
+        document.getElementById('avgDist').innerText = (avgSteps * stepLenKm).toFixed(2) + " km";
+        document.getElementById('totalSteps').innerText = totals.steps.toLocaleString(); 
+        document.getElementById('totalDist').innerText = (totals.steps * stepLenKm).toFixed(2) + " km";
+        document.getElementById('daysActive').innerText = totals.count;
+
+        const updateLifetime = (id, cur, tar) => {
+            const p = Math.min((cur/tar)*100, 100);
+            document.getElementById(id+'Text').innerText = p.toFixed(1) + "%";
+            document.getElementById(id+'Bar').style.width = p + "%";
+        };
+        updateLifetime('goal1M', totals.steps, 1000000);
+        updateLifetime('goal5M', totals.steps, 5000000);
+
+        const updateMonthGoal = (mKey, elId, targetKey) => {
+             const s = monthlySteps[mKey] || 0, tar = monthlyTargets[targetKey], p = Math.min((s/tar)*100, 100);
+             const bar = document.getElementById(elId+'Progress');
+             bar.style.width = p + "%";
+             bar.className = p >= 100 ? 'progress-bar bg-success' : 'progress-bar bg-primary';
+             document.getElementById(elId+'PctText').innerText = p.toFixed(1) + "%";
+             document.getElementById(elId+'TargetLabel').innerText = `${Math.round(s/1000)}k / ${Math.round(tar/1000)}k`;
+        };
+        updateMonthGoal('2026-05', 'may', 'target_may'); updateMonthGoal('2026-07', 'july', 'target_july'); updateMonthGoal('2026-09', 'sep', 'target_sep');
+        
+        document.querySelectorAll('.city-dot').forEach(d => d.classList.remove('active'));
+        document.getElementById('dot-'+origin).classList.add('active'); 
+        document.getElementById('dot-'+dest).classList.add('active');
+        const l = document.getElementById('mapLink');
+        l.setAttribute('x1', cityCoords[origin].x); l.setAttribute('y1', cityCoords[origin].y);
+        l.setAttribute('x2', cityCoords[dest].x); l.setAttribute('y2', cityCoords[dest].y);
+        l.setAttribute('visibility', 'visible');
+
+        const tPct = Math.min(( (totals.steps * stepLenKm) / tripKm) * 100 || 0, 100);
+        document.getElementById('tripLabel').innerText = `${origin} to ${dest}`; 
+        document.getElementById('tripPercent').innerText = tPct.toFixed(1) + "%";
+        document.getElementById('tripBar').style.width = tPct + "%";
+        document.getElementById('tripDistTotal').innerText = tripKm + " km";
+        document.getElementById('tripDistRem').innerText = Math.max(0, tripKm - (totals.steps * stepLenKm)).toFixed(1) + " km";
+    }
+
+    function openNumpad(type) { 
+        activeInputType = type; 
+        if (type === 'steps') {
+            currentNumValue = (userDailySteps[focusDateStr] ? userDailySteps[focusDateStr].steps : 0).toString();
+        } else if (type === 'height') {
+            currentNumValue = document.getElementById('displayHeight').innerText;
+        } else if (type.startsWith('target_')) {
+            currentNumValue = monthlyTargets[type].toString();
+        }
+        document.getElementById('numpadOverlay').style.display = 'flex'; 
+        document.getElementById('numpadTitle').innerText = type.replace('_', ' ').toUpperCase();
+        updateNumpadDisplay(); 
+    }
+
+    function addNum(n) { currentNumValue = currentNumValue === "0" ? n : currentNumValue + n; updateNumpadDisplay(); }
+    function backNum() { currentNumValue = currentNumValue.slice(0, -1) || "0"; updateNumpadDisplay(); }
+    function clearNum() { currentNumValue = "0"; updateNumpadDisplay(); }
+    function updateNumpadDisplay() { document.getElementById('numpadDisplay').innerText = parseInt(currentNumValue).toLocaleString(); }
+    function closeNumpad() { document.getElementById('numpadOverlay').style.display = 'none'; }
+    
+    function confirmNumpad() {
+        const val = parseInt(currentNumValue);
+        if (activeInputType === 'steps') { 
+            document.getElementById('formSteps').value = val; document.getElementById('formDate').value = focusDateStr; document.getElementById('stepForm').submit(); 
+        } else {
+            if (activeInputType === 'height') document.getElementById('confHeight').value = val;
+            else {
+                const month = activeInputType.split('_')[1];
+                document.getElementById('conf' + month.charAt(0).toUpperCase() + month.slice(1)).value = val;
+            }
+            document.getElementById('configForm').submit();
+        }
+    }
+
+    function renderCalendar() {
+        const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        document.getElementById('monthYearLabel').innerText = months[currentViewDate.getMonth()] + " " + currentViewDate.getFullYear();
+        const grid = document.getElementById('calendarGrid'); grid.innerHTML = "";
+        ["M", "T", "W", "T", "F", "S", "S"].forEach(d => grid.innerHTML += `<div class="cal-day-header">${d}</div>`);
+        let fDay = new Date(currentViewDate.getFullYear(), currentViewDate.getMonth(), 1).getDay();
+        let pad = fDay === 0 ? 6 : fDay - 1;
+        for (let i = 0; i < pad; i++) grid.innerHTML += `<div class="cal-date opacity-0"></div>`;
+        for (let day = 1; day <= new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() + 1, 0).getDate(); day++) {
+            const dStr = `${currentViewDate.getFullYear()}-${String(currentViewDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const s = userDailySteps[dStr] ? parseInt(userDailySteps[dStr].steps) : 0;
+            let tc = s >= 15000 ? "tier-15k" : s >= 10000 ? "tier-10k" : s >= 5000 ? "tier-5k" : s > 0 ? "tier-low" : "";
+            grid.innerHTML += `<div class="cal-date ${tc} ${dStr === focusDateStr ? "selected-day" : ""}" onclick="focusDate('${dStr}')">${day}</div>`;
+        }
+    }
+
+    function focusDate(ds) { 
+        focusDateStr = ds; 
+        const existing = userDailySteps[ds] ? parseInt(userDailySteps[ds].steps) : 0;
+        document.getElementById('btnLogSteps').innerText = existing > 0 ? "UPDATE STEPS" : "LOG STEPS";
+        document.getElementById('selectedDateDisplay').classList.remove('d-none'); 
+        document.getElementById('viewingDateLabel').innerText = ds; 
+        document.getElementById('viewingStepsLabel').innerText = existing.toLocaleString(); 
+        renderCalendar(); 
+    }
+
+    function changeMonth(d) { currentViewDate.setMonth(currentViewDate.getMonth() + d); renderCalendar(); }
+
+
+    // ==========================================
+    // 新增：动态时间戳与触屏弹窗交互逻辑
+    // ==========================================
+    let dynamicExportFilename = "";
+    let selectedExportDrive = null;
+
+    function openExportUI() {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mins = String(now.getMinutes()).padStart(2, '0');
+
+        dynamicExportFilename = `Mahi_Ora_Master_${yyyy}${mm}${dd}_${hh}${mins}.xlsx`;
+        selectedExportDrive = null;
+
+        document.getElementById('displayTimestampName').innerText = dynamicExportFilename;
+        document.getElementById('exportDriveStatus').textContent = '';
+        document.getElementById('exportDriveStatus').className = 'export-status text-warning mb-3';
+        document.getElementById('exportModalOverlay').style.display = 'flex';
+        loadExportDrives();
+    }
+
+    function closeExportUI() {
+        document.getElementById('exportModalOverlay').style.display = 'none';
+    }
+
+    async function loadExportDrives() {
+        const container = document.getElementById('exportDriveList');
+        container.innerHTML = '<span class="text-white-50 fs-5">Scanning drives...</span>';
+        try {
+            const res = await fetch('/api/walking/export/drives');
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Could not list drives');
+
+            if (!data.drives || data.drives.length === 0) {
+                container.innerHTML = '<span class="text-danger fs-5">No drives detected. Insert a USB drive and reopen export.</span>';
+                return;
+            }
+
+            container.innerHTML = '';
+            data.drives.forEach(drive => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'drive-btn' + (drive.is_removable ? ' usb' : '');
+                btn.dataset.path = drive.path;
+                const label = drive.label ? ` (${drive.label})` : '';
+                const tag = drive.is_removable ? 'USB' : drive.type_name;
+                btn.innerHTML = `${drive.letter}:<small>${tag}${label}</small>`;
+                btn.onclick = () => selectExportDrive(drive.path);
+                container.appendChild(btn);
+            });
+        } catch (err) {
+            container.innerHTML = `<span class="text-danger fs-5">${err.message}</span>`;
+        }
+    }
+
+    function selectExportDrive(path) {
+        selectedExportDrive = path;
+        document.querySelectorAll('.drive-btn').forEach(btn => {
+            btn.classList.toggle('selected', btn.dataset.path === path);
+        });
+        document.getElementById('exportDriveStatus').textContent = `Selected: ${path}`;
+        document.getElementById('exportDriveStatus').className = 'export-status text-info mb-3';
+    }
+
+    function buildMasterExportWorkbook() {
+        const height = parseInt(document.getElementById('displayHeight').innerText, 10);
+        const stepLenKm = (height * 0.48) / 100000;
+
+        const rawSheet = [["Participant Name", "Date", "Steps", "Accumulated Steps"]];
+        const participantTotals = {};
+        const sortedExport = [...masterExportData].sort((a, b) => new Date(a.log_date) - new Date(b.log_date));
+        const monthlyBreakdown = {};
+
+        sortedExport.forEach(entry => {
+            if (!participantTotals[entry.name]) participantTotals[entry.name] = 0;
+            participantTotals[entry.name] += entry.steps;
+            rawSheet.push([entry.name, entry.log_date, entry.steps, participantTotals[entry.name]]);
+
+            const mKey = entry.log_date.substring(0, 7);
+            if (!monthlyBreakdown[entry.name]) monthlyBreakdown[entry.name] = {};
+            monthlyBreakdown[entry.name][mKey] = (monthlyBreakdown[entry.name][mKey] || 0) + entry.steps;
+        });
+
+        const reportSheet = [["Name", "Daily Avg", "Overall Steps", "Overall Distance (km)", "Monthly Breakdown (Month: Steps)"]];
+        Object.keys(monthlyBreakdown).forEach(name => {
+            const uData = sortedExport.filter(e => e.name === name);
+            const total = uData.reduce((a, b) => a + b.steps, 0);
+            const days = uData.filter(e => e.steps > 0).length;
+            const mStr = Object.entries(monthlyBreakdown[name]).map(([m, s]) => `${m}: ${s.toLocaleString()}`).join(" | ");
+
+            reportSheet.push([
+                name,
+                Math.round(total / (days || 1)),
+                total,
+                (total * stepLenKm).toFixed(2),
+                mStr
+            ]);
+        });
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rawSheet), "Participant Raw Logs");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(reportSheet), "Achievement Report");
+        return wb;
+    }
+
+    async function executeExport() {
+        const statusEl = document.getElementById('exportDriveStatus');
+        if (!selectedExportDrive) {
+            statusEl.textContent = 'Please select a drive first.';
+            statusEl.className = 'export-status text-danger mb-3';
+            return;
+        }
+
+        statusEl.textContent = 'Saving...';
+        statusEl.className = 'export-status text-info mb-3';
+
+        try {
+            const wb = buildMasterExportWorkbook();
+            const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([excelBuffer], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+
+            const formData = new FormData();
+            formData.append('drive', selectedExportDrive);
+            formData.append('file', blob, dynamicExportFilename);
+
+            const res = await fetch('/api/walking/master_export/save', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Save failed');
+
+            statusEl.textContent = `Saved to ${data.path}`;
+            statusEl.className = 'export-status text-success mb-3';
+            setTimeout(closeExportUI, 2500);
+        } catch (error) {
+            console.error('Export failed:', error);
+            statusEl.textContent = error.message || 'Save failed';
+            statusEl.className = 'export-status text-danger mb-3';
+        }
+    }
+</script>
+</body>
+</html>
